@@ -159,6 +159,7 @@ func NewDnsWithOption(option DnsOption) *Dns {
 			Name:         option.Name,
 			Type:         C.Dns,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          true,
 			TFO:          option.TFO,
 			MPTCP:        option.MPTCP,

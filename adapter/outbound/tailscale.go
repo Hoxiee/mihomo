@@ -134,6 +134,7 @@ func NewTailscale(option TailscaleOption) (*Tailscale, error) {
 			Addr:         addr,
 			Type:         C.Tailscale,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          option.UDP,
 			Interface:    option.Interface,
 			RoutingMark:  option.RoutingMark,

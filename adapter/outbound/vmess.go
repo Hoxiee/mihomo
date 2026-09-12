@@ -503,6 +503,7 @@ func NewVmess(option VmessOption) (*Vmess, error) {
 			Addr:         net.JoinHostPort(option.Server, strconv.Itoa(option.Port)),
 			Type:         C.Vmess,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          option.UDP,
 			XUDP:         option.XUDP,
 			TFO:          option.TFO,

@@ -36,7 +36,8 @@ type TrackerInfo struct {
 type tcpTracker struct {
 	C.Conn `json:"-"`
 	*TrackerInfo
-	manager *Manager
+	manager  *Manager
+	progress atomic.Bool
 
 	pushToManager bool `json:"-"`
 }
@@ -49,6 +50,15 @@ func (tt *tcpTracker) Info() *TrackerInfo {
 	return tt.TrackerInfo
 }
 
+func (tt *tcpTracker) notifyProgress(size int64) {
+	if size <= 0 || !tt.progress.CompareAndSwap(false, true) {
+		return
+	}
+	if DefaultFirstProgressNotify != nil {
+		DefaultFirstProgressNotify(tt)
+	}
+}
+
 func (tt *tcpTracker) Read(b []byte) (int, error) {
 	n, err := tt.Conn.Read(b)
 	download := int64(n)
@@ -56,6 +66,7 @@ func (tt *tcpTracker) Read(b []byte) (int, error) {
 		tt.manager.PushDownloaded(tt.Conn.Chains().Last(), download)
 	}
 	tt.DownloadTotal.Add(download)
+	tt.notifyProgress(download)
 	return n, err
 }
 
@@ -66,6 +77,7 @@ func (tt *tcpTracker) ReadBuffer(buffer *buf.Buffer) (err error) {
 		tt.manager.PushDownloaded(tt.Chains().Last(), download)
 	}
 	tt.DownloadTotal.Add(download)
+	tt.notifyProgress(download)
 	return
 }
 
@@ -75,6 +87,7 @@ func (tt *tcpTracker) UnwrapReader() (io.Reader, []N.CountFunc) {
 			tt.manager.PushDownloaded(tt.Chains().Last(), download)
 		}
 		tt.DownloadTotal.Add(download)
+		tt.notifyProgress(download)
 	}}
 }
 
@@ -85,6 +98,7 @@ func (tt *tcpTracker) Write(b []byte) (int, error) {
 		tt.manager.PushUploaded(tt.Chains().Last(), upload)
 	}
 	tt.UploadTotal.Add(upload)
+	tt.notifyProgress(upload)
 	return n, err
 }
 
@@ -95,6 +109,7 @@ func (tt *tcpTracker) WriteBuffer(buffer *buf.Buffer) (err error) {
 		tt.manager.PushUploaded(tt.Chains().Last(), upload)
 	}
 	tt.UploadTotal.Add(upload)
+	tt.notifyProgress(upload)
 	return
 }
 
@@ -104,6 +119,7 @@ func (tt *tcpTracker) UnwrapWriter() (io.Writer, []N.CountFunc) {
 			tt.manager.PushUploaded(tt.Chains().Last(), upload)
 		}
 		tt.UploadTotal.Add(upload)
+		tt.notifyProgress(upload)
 	}}
 }
 
@@ -150,13 +166,15 @@ func NewTCPTracker(conn C.Conn, manager *Manager, metadata *C.Metadata, rule C.R
 	}
 
 	manager.Join(tt)
+	tt.notifyProgress(uploadTotal + downloadTotal)
 	return tt
 }
 
 type udpTracker struct {
 	C.PacketConn `json:"-"`
 	*TrackerInfo
-	manager *Manager
+	manager  *Manager
+	progress atomic.Bool
 
 	pushToManager bool `json:"-"`
 }
@@ -169,6 +187,15 @@ func (ut *udpTracker) Info() *TrackerInfo {
 	return ut.TrackerInfo
 }
 
+func (ut *udpTracker) notifyProgress(size int64) {
+	if size <= 0 || !ut.progress.CompareAndSwap(false, true) {
+		return
+	}
+	if DefaultFirstProgressNotify != nil {
+		DefaultFirstProgressNotify(ut)
+	}
+}
+
 func (ut *udpTracker) ReadFrom(b []byte) (int, net.Addr, error) {
 	n, addr, err := ut.PacketConn.ReadFrom(b)
 	download := int64(n)
@@ -176,6 +203,7 @@ func (ut *udpTracker) ReadFrom(b []byte) (int, net.Addr, error) {
 		ut.manager.PushDownloaded(ut.Chains().Last(), download)
 	}
 	ut.DownloadTotal.Add(download)
+	ut.notifyProgress(download)
 	return n, addr, err
 }
 
@@ -186,6 +214,7 @@ func (ut *udpTracker) WaitReadFrom() (data []byte, put func(), addr net.Addr, er
 		ut.manager.PushDownloaded(ut.Chains().Last(), download)
 	}
 	ut.DownloadTotal.Add(download)
+	ut.notifyProgress(download)
 	return
 }
 
@@ -196,6 +225,7 @@ func (ut *udpTracker) WriteTo(b []byte, addr net.Addr) (int, error) {
 		ut.manager.PushUploaded(ut.Chains().Last(), upload)
 	}
 	ut.UploadTotal.Add(upload)
+	ut.notifyProgress(upload)
 	return n, err
 }
 
@@ -242,5 +272,6 @@ func NewUDPTracker(conn C.PacketConn, manager *Manager, metadata *C.Metadata, ru
 	}
 
 	manager.Join(ut)
+	ut.notifyProgress(uploadTotal + downloadTotal)
 	return ut
 }

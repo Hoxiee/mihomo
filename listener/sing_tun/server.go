@@ -38,6 +38,7 @@ import (
 
 var InterfaceName = "Meta"
 var EnforceBindInterface = false
+var NewStack = tun.NewStack
 
 type Listener struct {
 	closed  bool
@@ -495,7 +496,7 @@ func New(options LC.Tun, tunnel C.Tunnel, additions ...inbound.Addition) (l *Lis
 	}
 	l.tunIf = tunIf
 
-	tunStack, err := tun.NewStack(strings.ToLower(options.Stack.String()), stackOptions)
+	tunStack, err := NewStack(strings.ToLower(options.Stack.String()), stackOptions)
 	if err != nil {
 		return
 	}

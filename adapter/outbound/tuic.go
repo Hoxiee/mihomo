@@ -244,6 +244,7 @@ func NewTuic(option TuicOption) (*Tuic, error) {
 			Addr:         addr,
 			Type:         C.Tuic,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          true,
 			TFO:          option.FastOpen,
 			Interface:    option.Interface,

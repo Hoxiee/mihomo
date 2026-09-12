@@ -147,6 +147,7 @@ func NewEasyTier(option EasyTierOption) (*EasyTier, error) {
 			Addr:         addr,
 			Type:         C.EasyTier,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          option.UDP,
 			Interface:    option.Interface,
 			RoutingMark:  option.RoutingMark,
