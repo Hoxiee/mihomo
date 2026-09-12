@@ -48,6 +48,7 @@ func NewRematch(option RematchOption) (*Rematch, error) {
 			Name:         option.Name,
 			Type:         C.Rematch,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          true,
 		}),
 		targetRematchName: option.TargetRematchName,

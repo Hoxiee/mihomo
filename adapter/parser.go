@@ -1,7 +1,10 @@
 package adapter
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/metacubex/mihomo/adapter/outbound"
 	"github.com/metacubex/mihomo/common/structure"
@@ -20,6 +23,7 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 		DialerForAPI: opt.DialerForAPI,
 		TunnelForAPI: opt.TunnelForAPI,
 		ProviderName: opt.ProviderName,
+		Diversity:    proxyDiversityFingerprint(proxyType, mapping),
 	}
 
 	var (
@@ -246,7 +250,49 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 	}
 
 	proxy = outbound.NewAutoCloseProxyAdapter(proxy)
-	return NewProxy(proxy), nil
+	parsed := NewProxy(proxy)
+	parsed.routeFingerprint = proxyRouteFingerprint(mapping)
+	parsed.routeDependency = firstString(mapping, "dialer-proxy")
+	return parsed, nil
+}
+
+func proxyDiversityFingerprint(proxyType string, mapping map[string]any) string {
+	network := firstString(mapping, "network", "transport")
+	if network == "" {
+		network = "default"
+	}
+	tls := mapping["tls"] == true
+	_, reality := mapping["reality-opts"]
+	_, obfs := mapping["obfs"]
+	if _, ok := mapping["obfs-opts"]; ok {
+		obfs = true
+	}
+	if plugin := firstString(mapping, "plugin"); plugin != "" {
+		obfs = true
+	}
+	sni := firstString(mapping, "servername", "server-name", "sni")
+	if sni == "" {
+		for _, key := range []string{"reality-opts", "tls"} {
+			if nested, ok := mapping[key].(map[string]any); ok {
+				sni = firstString(nested, "server-name", "servername", "sni")
+			}
+		}
+	}
+	sniClass := "none"
+	if sni != "" {
+		sum := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(sni))))
+		sniClass = hex.EncodeToString(sum[:4])
+	}
+	return fmt.Sprintf("v1|%s|%s|t=%t|r=%t|o=%t|s=%s", proxyType, strings.ToLower(network), tls, reality, obfs, sniClass)
+}
+
+func firstString(mapping map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := mapping[key].(string); ok && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 type proxyOption struct {
