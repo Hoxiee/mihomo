@@ -163,6 +163,7 @@ func NewShadowSocksR(option ShadowSocksROption) (*ShadowSocksR, error) {
 			Addr:         addr,
 			Type:         C.ShadowsocksR,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          option.UDP,
 			TFO:          option.TFO,
 			MPTCP:        option.MPTCP,

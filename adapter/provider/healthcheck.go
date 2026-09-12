@@ -41,19 +41,56 @@ type HealthCheck struct {
 	timeout        time.Duration
 }
 
+type hcTickAction int
+
+const (
+	hcRun hcTickAction = iota
+	hcDefer
+	hcSkip
+)
+
+// The routing engine, when it drives selection, is the single prover, so its
+// auto check is suppressed to avoid probing every node twice. Screen state wins
+// over recency next: a pocketed phone keeps touching groups from background
+// traffic, so `since < interval` alone fans out URLTests to every node while the
+// screen is off - the tunnel's main idle radio wake-up.
+func hcTickDecision(suppressed, screenOff bool, sinceTouch, interval time.Duration, lazy bool) hcTickAction {
+	switch {
+	case suppressed:
+		return hcDefer
+	case screenOff:
+		return hcDefer
+	case sinceTouch < interval:
+		return hcRun
+	case lazy:
+		return hcSkip
+	default:
+		return hcRun
+	}
+}
+
 func (hc *HealthCheck) process() {
 	ticker := time.NewTicker(hc.interval)
 	go hc.check()
+	var deferred bool
 	for {
 		select {
 		case <-ticker.C:
-			lastTouch := hc.lastTouch.Load()
-			since := time.Since(lastTouch)
-			if !hc.lazy || since < hc.interval {
-				hc.check()
-			} else {
+			switch hcTickDecision(autoHealthCheckSuppressed(), screenOff(), time.Since(hc.lastTouch.Load()), hc.interval, hc.lazy) {
+			case hcDefer:
+				deferred = true
+				log.Debugln("Defer health check until the screen comes back")
+			case hcSkip:
 				log.Debugln("Skip once health check because we are lazy")
+			default:
+				hc.check()
 			}
+		case <-screenWake():
+			if !deferred {
+				continue
+			}
+			deferred = false
+			hc.check()
 		case <-hc.ctx.Done():
 			ticker.Stop()
 			return

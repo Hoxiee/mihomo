@@ -120,6 +120,7 @@ func NewMasque(option MasqueOption) (*Masque, error) {
 			Addr:         net.JoinHostPort(option.Server, strconv.Itoa(option.Port)),
 			Type:         C.Masque,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          option.UDP,
 			Interface:    option.Interface,
 			RoutingMark:  option.RoutingMark,

@@ -25,7 +25,7 @@ func FindProcessName(network string, srcIP netip.Addr, srcPort int) (uint32, str
 type PackageNameResolver func(metadata *C.Metadata) (string, error)
 
 // DefaultPackageNameResolver
-// never change type traits because it's used in CFMA
+// never change type traits because it's used in CMFA
 var DefaultPackageNameResolver PackageNameResolver
 
 func FindPackageName(metadata *C.Metadata) (string, error) {

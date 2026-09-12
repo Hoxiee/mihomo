@@ -49,6 +49,11 @@ func UpdateMMDB() (err error) {
 	var skipped bool
 	defer func() { sendGeoUpdateStatus("MMDB", false, skipped, err) }()
 
+	if skipGeoDownload(geodata.MmdbUrl(), C.Path.MMDB()) {
+		skipped = true
+		return nil
+	}
+
 	vehicle := resource.NewHTTPVehicle(geodata.MmdbUrl(), C.Path.MMDB(), "", nil, defaultHttpTimeout, 0)
 	var oldHash utils.HashType
 	if buf, err := os.ReadFile(vehicle.Path()); err == nil {
@@ -85,6 +90,11 @@ func UpdateASN() (err error) {
 	sendGeoUpdateStatus("ASN", true, false, nil)
 	var skipped bool
 	defer func() { sendGeoUpdateStatus("ASN", false, skipped, err) }()
+
+	if skipGeoDownload(geodata.ASNUrl(), C.Path.ASN()) {
+		skipped = true
+		return nil
+	}
 
 	vehicle := resource.NewHTTPVehicle(geodata.ASNUrl(), C.Path.ASN(), "", nil, defaultHttpTimeout, 0)
 	var oldHash utils.HashType
@@ -123,6 +133,11 @@ func UpdateGeoIp() (err error) {
 	var skipped bool
 	defer func() { sendGeoUpdateStatus("GEOIP", false, skipped, err) }()
 
+	if skipGeoDownload(geodata.GeoIpUrl(), C.Path.GeoIP()) {
+		skipped = true
+		return nil
+	}
+
 	geoLoader, err := geodata.GetGeoDataLoader("standard")
 
 	vehicle := resource.NewHTTPVehicle(geodata.GeoIpUrl(), C.Path.GeoIP(), "", nil, defaultHttpTimeout, 0)
@@ -158,6 +173,11 @@ func UpdateGeoSite() (err error) {
 	sendGeoUpdateStatus("GEOSITE", true, false, nil)
 	var skipped bool
 	defer func() { sendGeoUpdateStatus("GEOSITE", false, skipped, err) }()
+
+	if skipGeoDownload(geodata.GeoSiteUrl(), C.Path.GeoSite()) {
+		skipped = true
+		return nil
+	}
 
 	geoLoader, err := geodata.GetGeoDataLoader("standard")
 

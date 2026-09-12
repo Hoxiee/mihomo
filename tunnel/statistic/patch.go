@@ -2,7 +2,10 @@ package statistic
 
 type RequestNotify func(c Tracker)
 
-var DefaultRequestNotify RequestNotify
+var (
+	DefaultRequestNotify       RequestNotify
+	DefaultFirstProgressNotify RequestNotify
+)
 
 func (m *Manager) TotalTraffic(onlyProxy bool) (up, down int64) {
 	if onlyProxy {
