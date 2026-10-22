@@ -252,6 +252,7 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 	proxy = outbound.NewAutoCloseProxyAdapter(proxy)
 	parsed := NewProxy(proxy)
 	parsed.routeFingerprint = proxyRouteFingerprint(mapping)
+	parsed.endpointFingerprint = proxyEndpointFingerprint(mapping)
 	parsed.routeDependency = firstString(mapping, "dialer-proxy")
 	return parsed, nil
 }

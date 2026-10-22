@@ -33,14 +33,25 @@ a passive witness — it observes, it doesn't intervene.
 - a *route fingerprint* — a hash of the proxy config that ignores the display name, so
   renaming a node doesn't change its identity;
 - a *diversity fingerprint* — a compact label of transport/TLS/obfs characteristics.
-  The SNI is hashed to an opaque class, never stored in the clear.
+  The SNI is hashed to an opaque class, never stored in the clear;
+- an *endpoint fingerprint* — type, server, port, SNI and transport host/path only, so a
+  provider rotating credentials (uuid, short-id, password) keeps the node recognisable.
 These let the app group and reason about nodes without leaking secrets.
 
 **Traffic split (proxy vs direct).** The statistics manager now tracks proxied traffic
 separately from direct traffic, so the UI can show how much actually went through a proxy.
 
 **Battery-friendly health checks.** On Android, when the screen is off, provider health
-checks are deferred until the screen wakes, to avoid waking the radio while idle.
+checks are deferred until the screen wakes, to avoid waking the radio while idle. The
+app's routing engine can also take over the auto health check of the providers serving its
+groups (`SetAutoHealthCheckSuppressed`, per provider name), so their nodes are not probed
+twice; every other provider keeps its own checks.
+
+**Direct split.** `tunnel.DirectSplitHook` lets the app send a connection that an explicit
+`DIRECT` rule matched through a proxy group it names instead. ReClash uses it only when the
+user turns "direct sites through this group" on and direct access to home sites is lost; the
+final `MATCH` rule is never split, and the app keeps local destinations direct. Without the
+hook set, rule matching is unchanged.
 
 **Smarter geo updates.** Before downloading a multi-megabyte GeoIP/GeoSite database, the
 updater fetches the remote checksum and skips the download if the local copy already

@@ -53,3 +53,23 @@ func TestRouteMetadataStaysPrivate(t *testing.T) {
 		}
 	}
 }
+
+func TestEndpointFingerprintSurvivesCredentialRotation(t *testing.T) {
+	a := map[string]any{"name": "first", "type": "vless", "server": "example.com", "port": 443, "uuid": "one", "servername": "cdn.example.com", "reality-opts": map[string]any{"short-id": "aa"}}
+	first := proxyEndpointFingerprint(a)
+	a["uuid"] = "two"
+	a["reality-opts"] = map[string]any{"short-id": "bb"}
+	a["name"] = "renamed"
+	if proxyEndpointFingerprint(a) != first {
+		t.Fatal("credential rotation changed the endpoint")
+	}
+	a["servername"] = "other.example.com"
+	if proxyEndpointFingerprint(a) == first {
+		t.Fatal("SNI change kept the endpoint")
+	}
+	a["servername"] = "cdn.example.com"
+	a["port"] = 8443
+	if proxyEndpointFingerprint(a) == first {
+		t.Fatal("port change kept the endpoint")
+	}
+}

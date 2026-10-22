@@ -702,6 +702,9 @@ func match(metadata *C.Metadata, helper C.RuleMatchHelper) (C.Proxy, C.Rule, err
 					continue
 				}
 
+				if split := directSplit(metadata, adapter, rule); split != nil {
+					return split, rule, nil
+				}
 				return adapter, rule, nil
 			}
 		}

@@ -39,6 +39,7 @@ type HealthCheck struct {
 	lastTouch      atomic.TypedValue[time.Time]
 	singleDo       *singledo.Single[struct{}]
 	timeout        time.Duration
+	owner          string
 }
 
 type hcTickAction int
@@ -76,7 +77,7 @@ func (hc *HealthCheck) process() {
 	for {
 		select {
 		case <-ticker.C:
-			switch hcTickDecision(autoHealthCheckSuppressed(), screenOff(), time.Since(hc.lastTouch.Load()), hc.interval, hc.lazy) {
+			switch hcTickDecision(autoHealthCheckSuppressed(hc.owner), screenOff(), time.Since(hc.lastTouch.Load()), hc.interval, hc.lazy) {
 			case hcDefer:
 				deferred = true
 				log.Debugln("Defer health check until the screen comes back")

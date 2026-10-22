@@ -32,3 +32,24 @@ func TestHCTickDecision(t *testing.T) {
 		})
 	}
 }
+
+func TestAutoHealthCheckSuppressionIsPerProvider(t *testing.T) {
+	t.Cleanup(func() { SetAutoHealthCheckSuppressed(nil) })
+	SetAutoHealthCheckSuppressed([]string{"smart"})
+	if !autoHealthCheckSuppressed("smart") || autoHealthCheckSuppressed("other") {
+		t.Fatal("suppression leaked across providers")
+	}
+	wake := screenWake()
+	SetAutoHealthCheckSuppressed([]string{"smart", "more"})
+	select {
+	case <-wake:
+		t.Fatal("adding a provider flushed deferred checks")
+	default:
+	}
+	SetAutoHealthCheckSuppressed([]string{"more"})
+	select {
+	case <-wake:
+	default:
+		t.Fatal("a released provider kept its deferred check waiting")
+	}
+}

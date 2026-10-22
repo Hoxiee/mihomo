@@ -9,7 +9,7 @@ func (pp *proxySetProvider) GetSubscriptionInfo() *SubscriptionInfo {
 var (
 	screenMu     sync.Mutex
 	screenIsOff  bool
-	hcSuppressed bool
+	hcSuppressed map[string]struct{}
 	screenWakeCh = make(chan struct{})
 )
 
@@ -37,27 +37,36 @@ func screenOff() bool {
 	return screenIsOff
 }
 
-// SetAutoHealthCheckSuppressed pauses the per-provider auto health check while
-// the routing engine is the single prover, so nodes are not probed twice. The
-// flush on resume reuses the screen-wake channel, so a deferred tick runs at once.
-func SetAutoHealthCheckSuppressed(suppressed bool) {
+// SetAutoHealthCheckSuppressed pauses the auto health check of the named
+// providers while the routing engine is their single prover, so their nodes are
+// not probed twice; other providers keep checking and the engine harvests their
+// results. A provider leaving the set flushes its deferred tick at once.
+func SetAutoHealthCheckSuppressed(providers []string) {
+	next := make(map[string]struct{}, len(providers))
+	for _, name := range providers {
+		next[name] = struct{}{}
+	}
 	screenMu.Lock()
 	defer screenMu.Unlock()
-	if hcSuppressed == suppressed {
-		return
+	released := false
+	for name := range hcSuppressed {
+		if _, kept := next[name]; !kept {
+			released = true
+		}
 	}
-	hcSuppressed = suppressed
-	if suppressed {
+	hcSuppressed = next
+	if !released {
 		return
 	}
 	close(screenWakeCh)
 	screenWakeCh = make(chan struct{})
 }
 
-func autoHealthCheckSuppressed() bool {
+func autoHealthCheckSuppressed(provider string) bool {
 	screenMu.Lock()
 	defer screenMu.Unlock()
-	return hcSuppressed
+	_, suppressed := hcSuppressed[provider]
+	return suppressed
 }
 
 func screenWake() <-chan struct{} {

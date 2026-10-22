@@ -110,3 +110,21 @@ func RuleProvidersSnapshot() map[string]P.RuleProvider {
 	defer configMux.RUnlock()
 	return ruleProviders
 }
+
+// DirectSplitHook lets the host send a connection an explicit DIRECT rule
+// matched through another proxy, by name; empty keeps it direct. ReClash uses
+// it where direct access to home sites is lost. It runs on every such match,
+// under the config lock, and must not block.
+var DirectSplitHook func(metadata *C.Metadata) string
+
+// The final MATCH rule is not split: "proxy everything" is never implied.
+func directSplit(metadata *C.Metadata, adapter C.Proxy, rule C.Rule) C.Proxy {
+	if DirectSplitHook == nil || adapter.Type() != C.Direct || rule.RuleType() == C.MATCH {
+		return nil
+	}
+	target, ok := proxies[DirectSplitHook(metadata)]
+	if !ok || metadata.NetWork == C.UDP && !target.SupportUDP() {
+		return nil
+	}
+	return target
+}

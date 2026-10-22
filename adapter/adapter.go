@@ -32,8 +32,9 @@ type internalProxyState struct {
 }
 
 type Proxy struct {
-	routeFingerprint string
-	routeDependency  string
+	routeFingerprint    string
+	endpointFingerprint string
+	routeDependency     string
 	C.ProxyAdapter
 	alive   atomic.Bool
 	history *queue.Queue[C.DelayHistory]
