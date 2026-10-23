@@ -187,6 +187,7 @@ func NewSsh(option SshOption) (*Ssh, error) {
 			Addr:         addr,
 			Type:         C.Ssh,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          false,
 			TFO:          option.TFO,
 			MPTCP:        option.MPTCP,
