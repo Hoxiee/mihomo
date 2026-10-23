@@ -78,6 +78,7 @@ var _ P.Tunnel = Tunnel
 var _ proxydialer.Tunnel = Tunnel
 
 func (t tunnel) HandleTCPConn(conn net.Conn, metadata *C.Metadata) {
+	notifyFlowEvidence(FlowEvidenceIngress, metadata, nil, nil, nil, 0)
 	connCtx := icontext.NewConnContext(conn, metadata)
 	handleTCPConn(connCtx)
 }
@@ -97,6 +98,7 @@ func initUDP() {
 }
 
 func (t tunnel) HandleUDPPacket(packet C.UDPPacket, metadata *C.Metadata) {
+	notifyFlowEvidence(FlowEvidenceIngress, metadata, nil, nil, nil, 0)
 	udpInit.Do(initUDP)
 
 	packetAdapter := C.NewPacketAdapter(packet, metadata)
@@ -255,6 +257,9 @@ func Mode() TunnelMode {
 
 // SetMode change the mode of tunnel
 func SetMode(m TunnelMode) {
+	if mode != m && ModeChangeHook != nil {
+		ModeChangeHook(m)
+	}
 	mode = m
 }
 
@@ -316,6 +321,12 @@ func preHandleMetadata(metadata *C.Metadata) error {
 }
 
 func resolveMetadata(metadata *C.Metadata) (proxy C.Proxy, rule C.Rule, err error) {
+	metadata.PolicyGlobal = metadata.PolicyGlobal || mode == Global
+	if MetadataPolicyHook != nil {
+		if err := MetadataPolicyHook(metadata); err != nil {
+			return nil, nil, err
+		}
+	}
 	if metadata.SpecialProxy != "" {
 		var exist bool
 		proxy, exist = proxies[metadata.SpecialProxy]
@@ -435,6 +446,7 @@ func handleUDPConn(packet C.PacketAdapter) {
 	if err := preHandleMetadata(metadata.Clone()); err != nil { // precheck without modify metadata
 		packet.Drop()
 		log.Debugln("[Metadata PreHandle] error: %s", err)
+		notifyFlowEvidence(FlowEvidencePreHandleFailed, metadata, nil, nil, err, 0)
 		return
 	}
 
@@ -461,17 +473,22 @@ func handleUDPConn(packet C.PacketAdapter) {
 			proxy, rule, err := resolveMetadata(metadata)
 			if err != nil {
 				log.Warnln("[UDP] Parse metadata failed: %s", err.Error())
+				notifyFlowEvidence(FlowEvidenceRouteFailed, metadata, rule, proxy, err, 0)
 				return nil, nil, err
 			}
+			notifyFlowEvidence(FlowEvidenceRouteResolved, metadata, rule, proxy, nil, 0)
 
 			dialMetadata := metadata.Pure()
 			ctx, cancel := context.WithTimeout(context.Background(), C.DefaultUDPTimeout)
 			defer cancel()
+			dialStarted := time.Now()
+			notifyFlowEvidence(FlowEvidenceDialStarted, metadata, rule, proxy, nil, 0)
 			rawPc, err := retry(ctx, func(ctx context.Context) (C.PacketConn, error) {
 				return proxy.ListenPacketContext(ctx, dialMetadata)
 			}, func(err error) {
 				logMetadataErr(metadata, rule, proxy, err)
 			})
+			notifyFlowEvidence(FlowEvidenceDialFinished, metadata, rule, proxy, err, time.Since(dialStarted))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -536,8 +553,10 @@ func handleTCPConn(connCtx C.ConnContext) {
 
 	// If both trials have failed, we can do nothing but give up
 	if preHandleFailed {
+		err := errors.New("metadata pre-handle failed")
 		log.Debugln("[Metadata PreHandle] failed to sniff a domain for connection %s --> %s, give up",
 			metadata.SourceDetail(), metadata.RemoteAddress())
+		notifyFlowEvidence(FlowEvidencePreHandleFailed, metadata, nil, nil, err, 0)
 		return
 	}
 
@@ -555,8 +574,10 @@ func handleTCPConn(connCtx C.ConnContext) {
 	proxy, rule, err := resolveMetadata(metadata)
 	if err != nil {
 		log.Warnln("[Metadata] parse failed: %s", err.Error())
+		notifyFlowEvidence(FlowEvidenceRouteFailed, metadata, rule, proxy, err, 0)
 		return
 	}
+	notifyFlowEvidence(FlowEvidenceRouteResolved, metadata, rule, proxy, nil, 0)
 
 	dialMetadata := metadata
 	if len(metadata.Host) > 0 {
@@ -574,6 +595,8 @@ func handleTCPConn(connCtx C.ConnContext) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), C.DefaultTCPTimeout)
 	defer cancel()
+	dialStarted := time.Now()
+	notifyFlowEvidence(FlowEvidenceDialStarted, metadata, rule, proxy, nil, 0)
 	remoteConn, err := retry(ctx, func(ctx context.Context) (remoteConn C.Conn, err error) {
 		remoteConn, err = proxy.DialContext(ctx, dialMetadata)
 		if err != nil {
@@ -608,6 +631,7 @@ func handleTCPConn(connCtx C.ConnContext) {
 	}, func(err error) {
 		logMetadataErr(metadata, rule, proxy, err)
 	})
+	notifyFlowEvidence(FlowEvidenceDialFinished, metadata, rule, proxy, err, time.Since(dialStarted))
 	if err != nil {
 		return
 	}
@@ -687,6 +711,9 @@ func match(metadata *C.Metadata, helper C.RuleMatchHelper) (C.Proxy, C.Rule, err
 					continue
 				}
 
+				if split := directSplit(metadata, adapter, rule); split != nil {
+					return split, rule, nil
+				}
 				return adapter, rule, nil
 			}
 		}

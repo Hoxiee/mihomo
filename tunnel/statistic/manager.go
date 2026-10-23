@@ -44,10 +44,14 @@ type Manager struct {
 }
 
 func (m *Manager) Join(c Tracker) {
+	m.connections.Store(c.ID(), c)
+	if DefaultConnectionAdmission != nil && !DefaultConnectionAdmission(c) {
+		m.connections.Delete(c.ID())
+		return
+	}
 	if DefaultRequestNotify != nil {
 		DefaultRequestNotify(c)
 	}
-	m.connections.Store(c.ID(), c)
 }
 
 func (m *Manager) Leave(c Tracker) {

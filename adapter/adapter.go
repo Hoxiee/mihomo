@@ -32,6 +32,9 @@ type internalProxyState struct {
 }
 
 type Proxy struct {
+	routeFingerprint    string
+	endpointFingerprint string
+	routeDependency     string
 	C.ProxyAdapter
 	alive   atomic.Bool
 	history *queue.Queue[C.DelayHistory]
@@ -54,13 +57,43 @@ func (p *Proxy) AliveForTestUrl(url string) bool {
 
 // DialContext implements C.ProxyAdapter
 func (p *Proxy) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+	if err := checkDialPolicy(p, metadata); err != nil {
+		return nil, err
+	}
+	start := time.Now()
 	conn, err := p.ProxyAdapter.DialContext(ctx, metadata)
+	if err == nil {
+		if policyErr := checkDialPolicy(p, metadata); policyErr != nil {
+			if conn != nil {
+				_ = conn.Close()
+			}
+			return nil, policyErr
+		}
+	}
+	if DialResultHook != nil {
+		DialResultHook(p.Name(), metadata.SourceAddress(), err, time.Since(start))
+	}
 	return conn, err
 }
 
 // ListenPacketContext implements C.ProxyAdapter
 func (p *Proxy) ListenPacketContext(ctx context.Context, metadata *C.Metadata) (C.PacketConn, error) {
+	if err := checkDialPolicy(p, metadata); err != nil {
+		return nil, err
+	}
+	start := time.Now()
 	pc, err := p.ProxyAdapter.ListenPacketContext(ctx, metadata)
+	if err == nil {
+		if policyErr := checkDialPolicy(p, metadata); policyErr != nil {
+			if pc != nil {
+				_ = pc.Close()
+			}
+			return nil, policyErr
+		}
+	}
+	if DialResultHook != nil {
+		DialResultHook(p.Name(), metadata.SourceAddress(), err, time.Since(start))
+	}
 	return pc, err
 }
 

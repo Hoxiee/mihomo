@@ -27,19 +27,20 @@ type ProxyAdapter interface {
 }
 
 type Base struct {
-	name   string
-	addr   string
-	tp     C.AdapterType
-	pdName string
-	udp    bool
-	xudp   bool
-	tfo    bool
-	mpTcp  bool
-	iface  string
-	rmark  int
-	prefer C.DNSPrefer
-	dialer C.Dialer
-	id     uuid.UUID
+	name      string
+	addr      string
+	tp        C.AdapterType
+	pdName    string
+	diversity string
+	udp       bool
+	xudp      bool
+	tfo       bool
+	mpTcp     bool
+	iface     string
+	rmark     int
+	prefer    C.DNSPrefer
+	dialer    C.Dialer
+	id        uuid.UUID
 }
 
 type BaseOption struct {
@@ -47,6 +48,7 @@ type BaseOption struct {
 	Addr         string
 	Type         C.AdapterType
 	ProviderName string
+	Diversity    string
 	UDP          bool
 	XUDP         bool
 	TFO          bool
@@ -58,18 +60,19 @@ type BaseOption struct {
 
 func NewBase(opt BaseOption) *Base {
 	return &Base{
-		name:   opt.Name,
-		addr:   opt.Addr,
-		tp:     opt.Type,
-		pdName: opt.ProviderName,
-		udp:    opt.UDP,
-		xudp:   opt.XUDP,
-		tfo:    opt.TFO,
-		mpTcp:  opt.MPTCP,
-		iface:  opt.Interface,
-		rmark:  opt.RoutingMark,
-		prefer: opt.Prefer,
-		id:     utils.NewUUIDV4(),
+		name:      opt.Name,
+		addr:      opt.Addr,
+		tp:        opt.Type,
+		pdName:    opt.ProviderName,
+		diversity: opt.Diversity,
+		udp:       opt.UDP,
+		xudp:      opt.XUDP,
+		tfo:       opt.TFO,
+		mpTcp:     opt.MPTCP,
+		iface:     opt.Interface,
+		rmark:     opt.RoutingMark,
+		prefer:    opt.Prefer,
+		id:        utils.NewUUIDV4(),
 	}
 }
 
@@ -116,6 +119,7 @@ func (b *Base) ProxyInfo() (info C.ProxyInfo) {
 	info.Interface = b.iface
 	info.RoutingMark = b.rmark
 	info.ProviderName = b.pdName
+	info.DiversityFingerprint = b.diversity
 	return
 }
 
@@ -204,6 +208,7 @@ type BasicOption struct {
 	DialerForAPI C.Dialer `proxy:"-"` // the dialer used for API usage has higher priority than all the above configurations.
 	TunnelForAPI C.Tunnel `proxy:"-"`
 	ProviderName string   `proxy:"-"`
+	Diversity    string   `proxy:"-"`
 }
 
 func (b *BasicOption) NewDialer(opts []dialer.Option) C.Dialer {

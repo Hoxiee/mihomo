@@ -2,7 +2,11 @@ package statistic
 
 type RequestNotify func(c Tracker)
 
-var DefaultRequestNotify RequestNotify
+var (
+	DefaultConnectionAdmission func(Tracker) bool
+	DefaultRequestNotify       RequestNotify
+	DefaultFirstProgressNotify RequestNotify
+)
 
 // IsDirect reports whether the named outbound reaches the destination without
 // a proxy. A direct proxy may carry any name, so the tunnel, which knows each

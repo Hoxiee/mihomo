@@ -1,3 +1,5 @@
+> ReClash patch notes: [English](PATCHES.md) · [Русский](PATCHES.ru.md)
+
 <h1 align="center">
   <img src="Meta.png" alt="Meta Kennel" width="200">
   <br>Meta Kernel<br>

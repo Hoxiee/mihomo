@@ -132,6 +132,7 @@ func NewOpenVPN(option OpenVPNOption) (*OpenVPN, error) {
 			Addr:         cfg.RemoteAddress(),
 			Type:         C.OpenVPN,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          true,
 			TFO:          option.TFO,
 			MPTCP:        option.MPTCP,

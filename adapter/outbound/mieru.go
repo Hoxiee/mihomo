@@ -161,6 +161,7 @@ func NewMieru(option MieruOption) (*Mieru, error) {
 			Addr:         addr,
 			Type:         C.Mieru,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          option.UDP,
 			TFO:          option.TFO,
 			MPTCP:        option.MPTCP,

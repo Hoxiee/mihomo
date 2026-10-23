@@ -247,6 +247,7 @@ func NewHysteria(option HysteriaOption) (*Hysteria, error) {
 			Addr:         addr,
 			Type:         C.Hysteria,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          true,
 			TFO:          option.FastOpen,
 			Interface:    option.Interface,

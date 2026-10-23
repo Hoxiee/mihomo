@@ -182,6 +182,7 @@ func (pp *proxySetProvider) Close() error {
 }
 
 func NewProxySetProvider(name string, interval time.Duration, payload []map[string]any, parser resource.Parser[[]C.Proxy], vehicle P.Vehicle, hc *HealthCheck) (*ProxySetProvider, error) {
+	hc.owner = name
 	pd := &proxySetProvider{
 		baseProvider: baseProvider{
 			name:        name,
@@ -259,6 +260,7 @@ func (ip *inlineProvider) Update() error {
 }
 
 func NewInlineProvider(name string, payload []map[string]any, parser resource.Parser[[]C.Proxy], hc *HealthCheck) (*InlineProvider, error) {
+	hc.owner = name
 	ps := ProxySchema{Proxies: payload}
 	buf, err := yaml.Marshal(ps)
 	if err != nil {
@@ -318,6 +320,7 @@ func (cp *compatibleProvider) VehicleType() P.VehicleType {
 }
 
 func NewCompatibleProvider(name string, proxies []C.Proxy, hc *HealthCheck) (*CompatibleProvider, error) {
+	hc.owner = name
 	if len(proxies) == 0 {
 		return nil, errors.New("provider need one proxy at least")
 	}

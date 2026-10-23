@@ -81,6 +81,7 @@ func NewGostRelay(option GostRelayOption) (*GostRelay, error) {
 			Addr:         addr,
 			Type:         C.GostRelay,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          option.UDP,
 			TFO:          option.TFO,
 			MPTCP:        option.MPTCP,

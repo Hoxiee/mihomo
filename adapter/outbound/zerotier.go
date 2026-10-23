@@ -300,6 +300,7 @@ func NewZeroTier(option ZeroTierOption) (*ZeroTier, error) {
 			Addr:         option.Network,
 			Type:         C.ZeroTier,
 			ProviderName: option.ProviderName,
+			Diversity:    option.Diversity,
 			UDP:          option.UDP,
 			Interface:    option.Interface,
 			RoutingMark:  option.RoutingMark,

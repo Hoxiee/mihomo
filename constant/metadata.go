@@ -188,6 +188,9 @@ func (t Type) MarshalJSON() ([]byte, error) {
 
 // Metadata is used to store connection address
 type Metadata struct {
+	PolicyGeneration uint64 `json:"-"`
+	PolicyGlobal     bool   `json:"-"`
+
 	NetWork      NetWork    `json:"network"`
 	Type         Type       `json:"type"`
 	SrcIP        netip.Addr `json:"sourceIP"`
